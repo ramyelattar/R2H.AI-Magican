@@ -1,0 +1,12 @@
+﻿# Code ownership boundaries
+/docs/governance/ @platform-team @security-team
+/docs/security/ @security-team
+/build-logic/ @platform-team
+
+/app/ @platform-team
+/core/ @platform-team
+/ai/runtime/ @ai-runtime-team @security-team
+/ai/orchestrator/ @ai-runtime-team
+/features/ @feature-team
+
+/.github/workflows/ @platform-team @security-team

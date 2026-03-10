@@ -1,0 +1,21 @@
+# Gradle / build outputs
+.gradle/
+.gradle-user-home/
+.kotlin/
+**/build/
+**/.cxx/
+
+# IDE
+.idea/
+*.iml
+
+# Local SDK / machine-specific settings
+local.properties
+
+# Local model assets
+ai/runtime/src/main/assets/models/placeholder-model.gguf
+app/src/main/assets/placeholder-model.gguf
+
+# OS artifacts
+.DS_Store
+Thumbs.db
