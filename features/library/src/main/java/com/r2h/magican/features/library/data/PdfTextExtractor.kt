@@ -12,6 +12,18 @@ interface PdfTextExtractor {
     suspend fun extract(uri: Uri, maxChars: Int = 40_000): String
 }
 
+/**
+ * Heuristic PDF text extractor that reads raw bytes and filters ASCII printable characters.
+ *
+ * **Known Limitations:**
+ * - Does NOT handle compressed PDF streams (Flate/LZW deflate) — common in modern PDFs.
+ * - Does NOT handle embedded fonts, CID font dictionaries, or ToUnicode CMaps.
+ * - Does NOT decrypt password-protected PDFs.
+ * - Best results on legacy, uncompressed PDFs with ASCII text streams.
+ *
+ * **TODO:** Replace with a proper PDF parsing library (e.g., PdfBox Android, Apache PDFBox)
+ * for production-quality text extraction across modern PDF variants.
+ */
 @Singleton
 class HeuristicPdfTextExtractor @Inject constructor(
     @ApplicationContext private val context: Context
