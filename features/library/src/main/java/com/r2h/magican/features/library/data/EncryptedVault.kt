@@ -60,7 +60,10 @@ class EncryptedVault @Inject constructor(
     }
 
     suspend fun delete(vaultFileName: String) = withContext(Dispatchers.IO) {
-        File(rootDir, vaultFileName).delete()
+        val file = File(rootDir, vaultFileName)
+        if (file.exists() && !file.delete()) {
+            error("Failed to delete encrypted vault file: $vaultFileName")
+        }
     }
 
     suspend fun readEncryptedIndex(indexFileName: String): ByteArray? = withContext(Dispatchers.IO) {
