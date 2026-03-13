@@ -35,6 +35,7 @@ kapt {
 dependencies {
     implementation(project(":core:design"))
     implementation(project(":ai:runtime"))
+    implementation(project(":ai:orchestrator"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.lifecycle.runtime.ktx)
