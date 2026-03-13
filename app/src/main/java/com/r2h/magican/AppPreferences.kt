@@ -17,17 +17,17 @@ class AppPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    val themeModeValue: Flow<String> = context.appPreferencesDataStore.data.map { prefs ->
-        prefs[PreferenceKeys.themeMode] ?: DEFAULT_THEME_MODE
+    val themeModeValue: Flow<ThemeModeValue> = context.appPreferencesDataStore.data.map { prefs ->
+        (prefs[PreferenceKeys.themeMode] ?: DEFAULT_THEME_MODE).toThemeModeValue()
     }
 
     val lastRoute: Flow<String?> = context.appPreferencesDataStore.data.map { prefs ->
         prefs[PreferenceKeys.lastRoute]
     }
 
-    suspend fun setThemeMode(value: String) {
+    suspend fun setThemeMode(mode: ThemeModeValue) {
         context.appPreferencesDataStore.edit { prefs ->
-            prefs[PreferenceKeys.themeMode] = value
+            prefs[PreferenceKeys.themeMode] = mode.toPreferenceString()
         }
     }
 

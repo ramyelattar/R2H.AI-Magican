@@ -30,8 +30,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.r2h.magican.AppPreferences.Companion.toPreferenceString
-import com.r2h.magican.AppPreferences.Companion.toThemeModeValue
 import com.r2h.magican.core.design.components.GlassCard
 import com.r2h.magican.core.design.components.MysticScaffold
 import com.r2h.magican.core.design.components.NeonButton
@@ -57,10 +55,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val themeModeString by appPreferences.themeModeValue.collectAsStateWithLifecycle(
-                initialValue = AppPreferences.DEFAULT_THEME_MODE
-            )
-            val themeMode = themeModeString.toThemeModeValue()
+            val themeMode by appPreferences.themeModeValue
+                .collectAsStateWithLifecycle(initialValue = AppPreferences.ThemeModeValue.System)
             val darkTheme = when (themeMode) {
                 AppPreferences.ThemeModeValue.System -> isSystemInDarkTheme()
                 AppPreferences.ThemeModeValue.Dark   -> true
@@ -77,9 +73,7 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     themeMode = themeMode,
                     onThemeModeChange = { newMode ->
-                        lifecycleScope.launch {
-                            appPreferences.setThemeMode(newMode.toPreferenceString())
-                        }
+                        lifecycleScope.launch { appPreferences.setThemeMode(newMode) }
                     }
                 )
             }
