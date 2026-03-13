@@ -18,6 +18,7 @@ class VoiceSessionAggregator {
     private var breathCycles = 0
     private var lastTransitionMs = 0L
 
+    @Synchronized
     fun reset() {
         frames = 0
         sumEnergy = 0f
@@ -30,6 +31,7 @@ class VoiceSessionAggregator {
         lastTransitionMs = 0L
     }
 
+    @Synchronized
     fun ingest(
         features: VoiceFeatures,
         timestampMs: Long,
@@ -60,6 +62,7 @@ class VoiceSessionAggregator {
         }
     }
 
+    @Synchronized
     fun snapshot(
         mode: VoiceSessionMode,
         durationMs: Long
