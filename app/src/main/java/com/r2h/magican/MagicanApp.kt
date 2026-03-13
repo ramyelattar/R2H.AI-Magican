@@ -7,11 +7,9 @@ import com.r2h.magican.ai.runtime.AiRuntimeInitializer
 import com.r2h.magican.ai.orchestrator.OrchestratorInitializer
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 @HiltAndroidApp
@@ -22,8 +20,6 @@ class MagicanApp : Application() {
 
     @Inject
     lateinit var orchestratorInitializer: OrchestratorInitializer
-
-    private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
@@ -43,7 +39,7 @@ class MagicanApp : Application() {
             )
         }
 
-        startupScope.launch {
+        ProcessLifecycleOwner.get().lifecycleScope.launch {
             val runtimeReadiness = try {
                 // Phase 1: Load and verify AI runtime.
                 aiRuntimeInitializer.initializeDefaultModelIfConfigured()
@@ -69,8 +65,4 @@ class MagicanApp : Application() {
         }
     }
 
-    override fun onTerminate() {
-        startupScope.cancel()
-        super.onTerminate()
-    }
 }
