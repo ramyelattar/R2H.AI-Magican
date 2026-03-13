@@ -27,6 +27,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 @HiltViewModel
 class TarotViewModel @Inject constructor(
@@ -39,13 +41,13 @@ class TarotViewModel @Inject constructor(
 
     private val deckMutex = Mutex()
     private var deck = TarotDeckFactory.majorArcana().shuffled(Random(System.currentTimeMillis())).toMutableList()
-    private var lastShuffleAtMs = 0L
+    private val lastShuffleAtMs = AtomicLong(0L)
     private var isScreenActive = false
     private var shakeJob: Job? = null
     private var blowJob: Job? = null
     private var readingJob: Job? = null
     private var readingGeneration: Long = 0L
-    private var isRequestingReading = false
+    private val isRequestingReading = AtomicBoolean(false)
 
     private val _uiState = MutableStateFlow(TarotUiState(deckCount = deck.size))
     val uiState = _uiState.asStateFlow()
@@ -151,7 +153,7 @@ class TarotViewModel @Inject constructor(
         readingJob?.cancel()
         readingJob = null
         readingGeneration += 1L
-        isRequestingReading = false
+        isRequestingReading.set(false)
 
         viewModelScope.launch {
             deckMutex.withLock {
@@ -227,8 +229,8 @@ class TarotViewModel @Inject constructor(
 
     private suspend fun shuffleDeck(reason: String) {
         val now = SystemClock.elapsedRealtime()
-        if (now - lastShuffleAtMs < 650L) return
-        lastShuffleAtMs = now
+        if (now - lastShuffleAtMs.get() < 650L) return
+        lastShuffleAtMs.set(now)
 
         _uiState.update { it.copy(isShuffling = true, status = reason) }
 
@@ -257,12 +259,12 @@ class TarotViewModel @Inject constructor(
 
     private fun requestReading() {
         if (readingJob?.isActive == true) return
-        if (isRequestingReading) return
+        if (isRequestingReading.get()) return
         if (_uiState.value.isLoadingAi) return
         val generation = readingGeneration + 1L
         readingGeneration = generation
         readingJob = viewModelScope.launch {
-            isRequestingReading = true
+            isRequestingReading.set(true)
 
             _uiState.update { it.copy(isLoadingAi = true, status = "Consulting the cards...") }
 
@@ -316,7 +318,7 @@ class TarotViewModel @Inject constructor(
                 }
             } finally {
                 if (generation == readingGeneration) {
-                    isRequestingReading = false
+                    isRequestingReading.set(false)
                     readingJob = null
                     _uiState.update { state ->
                         if (!state.isLoadingAi) state else state.copy(isLoadingAi = false)
