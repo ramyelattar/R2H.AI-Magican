@@ -47,8 +47,8 @@ class MagicanApp : Application() {
             val runtimeReadiness = try {
                 // Phase 1: Load and verify AI runtime.
                 aiRuntimeInitializer.initializeDefaultModelIfConfigured()
-            } catch (_: CancellationException) {
-                throw
+            } catch (e: CancellationException) {
+                throw e
             } catch (error: Throwable) {
                 Log.e("MagicanApp", "AI runtime initialization failed: ${error::class.java.simpleName}")
                 aiRuntimeInitializer.latestReadiness()
@@ -61,8 +61,8 @@ class MagicanApp : Application() {
             try {
                 // Phase 2: Run orchestration self-test and prepare orchestrator.
                 orchestratorInitializer.initialize(runtimeReadiness)
-            } catch (_: CancellationException) {
-                throw
+            } catch (e: CancellationException) {
+                throw e
             } catch (error: Throwable) {
                 Log.e("MagicanApp", "Orchestrator initialization failed: ${error::class.java.simpleName}")
             }

@@ -42,7 +42,21 @@ class AppPreferences @Inject constructor(
         val lastRoute = stringPreferencesKey("last_route")
     }
 
+    enum class ThemeModeValue { System, Dark, Light }
+
     companion object {
         const val DEFAULT_THEME_MODE = "system"
+
+        fun String?.toThemeModeValue(): ThemeModeValue = when (this) {
+            "dark"  -> ThemeModeValue.Dark
+            "light" -> ThemeModeValue.Light
+            else    -> ThemeModeValue.System
+        }
+
+        fun ThemeModeValue.toPreferenceString(): String = when (this) {
+            ThemeModeValue.System -> "system"
+            ThemeModeValue.Dark   -> "dark"
+            ThemeModeValue.Light  -> "light"
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.r2h.magican
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,10 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.r2h.magican.AppPreferences.Companion.toPreferenceString
+import com.r2h.magican.AppPreferences.Companion.toThemeModeValue
 import com.r2h.magican.core.design.components.GlassCard
 import com.r2h.magican.core.design.components.MysticScaffold
 import com.r2h.magican.core.design.components.NeonButton
@@ -41,18 +46,25 @@ import com.r2h.magican.features.palm.presentation.PalmScreen
 import com.r2h.magican.features.tarot.presentation.TarotScreen
 import com.r2h.magican.features.voiceaura.presentation.VoiceAuraScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject lateinit var appPreferences: AppPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            var themeMode by rememberSaveable { mutableStateOf(ThemeMode.System) }
+            val themeModeString by appPreferences.themeModeValue.collectAsStateWithLifecycle(
+                initialValue = AppPreferences.DEFAULT_THEME_MODE
+            )
+            val themeMode = themeModeString.toThemeModeValue()
             val darkTheme = when (themeMode) {
-                ThemeMode.System -> androidx.compose.foundation.isSystemInDarkTheme()
-                ThemeMode.Dark -> true
-                ThemeMode.Light -> false
+                AppPreferences.ThemeModeValue.System -> isSystemInDarkTheme()
+                AppPreferences.ThemeModeValue.Dark   -> true
+                AppPreferences.ThemeModeValue.Light  -> false
             }
 
             MysticTheme(
@@ -64,14 +76,16 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(
                     navController = navController,
                     themeMode = themeMode,
-                    onThemeModeChange = { themeMode = it }
+                    onThemeModeChange = { newMode ->
+                        lifecycleScope.launch {
+                            appPreferences.setThemeMode(newMode.toPreferenceString())
+                        }
+                    }
                 )
             }
         }
     }
 }
-
-private enum class ThemeMode { System, Dark, Light }
 
 private data class FeatureRoute(
     val route: String,
@@ -93,8 +107,8 @@ private val HomeRoutes = listOf(
 @Composable
 private fun AppNavHost(
     navController: NavHostController,
-    themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit
+    themeMode: AppPreferences.ThemeModeValue,
+    onThemeModeChange: (AppPreferences.ThemeModeValue) -> Unit
 ) {
     var lastRoute by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -130,8 +144,8 @@ private fun AppNavHost(
 
 @Composable
 private fun HomeScreen(
-    themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit,
+    themeMode: AppPreferences.ThemeModeValue,
+    onThemeModeChange: (AppPreferences.ThemeModeValue) -> Unit,
     lastRouteTitle: String?,
     onOpenLast: () -> Unit,
     onOpen: (String) -> Unit
@@ -168,20 +182,20 @@ private fun HomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
                         text = "Theme: System",
-                        onClick = { onThemeModeChange(ThemeMode.System) },
-                        enabled = themeMode != ThemeMode.System,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.System) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.System,
                         modifier = Modifier.fillMaxWidth()
                     )
                     NeonButton(
                         text = "Theme: Dark",
-                        onClick = { onThemeModeChange(ThemeMode.Dark) },
-                        enabled = themeMode != ThemeMode.Dark,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.Dark) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.Dark,
                         modifier = Modifier.fillMaxWidth()
                     )
                     NeonButton(
                         text = "Theme: Light",
-                        onClick = { onThemeModeChange(ThemeMode.Light) },
-                        enabled = themeMode != ThemeMode.Light,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.Light) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.Light,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
