@@ -35,7 +35,7 @@ class ModelStore @Inject constructor(
             }
         }
 
-        val actualSha256 = sha256(target)
+        val actualSha256 = sha256Cached(target)
         val expectedSha256 = spec.expectedSha256?.trim()?.lowercase().orEmpty()
         if (expectedSha256.isNotBlank()) {
             require(actualSha256 == expectedSha256) {
@@ -49,6 +49,24 @@ class ModelStore @Inject constructor(
             sha256 = actualSha256,
             sizeBytes = sizeBytes
         )
+    }
+
+    /**
+     * SHA-256 with a sidecar file cache to avoid rehashing large GGUF models on every load.
+     * Cache key: file size + last-modified. Invalidated automatically when file changes.
+     */
+    private fun sha256Cached(file: File): String {
+        val sidecar = File(file.parent, "${file.name}.sha256")
+        val cacheKey = "${file.length()}_${file.lastModified()}"
+        if (sidecar.exists()) {
+            val lines = runCatching { sidecar.readLines() }.getOrNull()
+            if (lines != null && lines.size == 2 && lines[1] == cacheKey) {
+                return lines[0]
+            }
+        }
+        val hash = sha256(file)
+        runCatching { sidecar.writeText("$hash\n$cacheKey") }
+        return hash
     }
 
     private fun sha256(file: File): String {

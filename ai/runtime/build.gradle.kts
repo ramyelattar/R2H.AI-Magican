@@ -153,4 +153,5 @@ dependencies {
     implementation(libs.javax.inject)
     implementation(libs.kotlinx.coroutines.android)
     kapt(libs.hilt.compiler)
+    testImplementation(libs.junit)
 }

@@ -17,17 +17,17 @@ class AppPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    val themeModeValue: Flow<String> = context.appPreferencesDataStore.data.map { prefs ->
-        prefs[PreferenceKeys.themeMode] ?: DEFAULT_THEME_MODE
+    val themeModeValue: Flow<ThemeModeValue> = context.appPreferencesDataStore.data.map { prefs ->
+        (prefs[PreferenceKeys.themeMode] ?: DEFAULT_THEME_MODE).toThemeModeValue()
     }
 
     val lastRoute: Flow<String?> = context.appPreferencesDataStore.data.map { prefs ->
         prefs[PreferenceKeys.lastRoute]
     }
 
-    suspend fun setThemeMode(value: String) {
+    suspend fun setThemeMode(mode: ThemeModeValue) {
         context.appPreferencesDataStore.edit { prefs ->
-            prefs[PreferenceKeys.themeMode] = value
+            prefs[PreferenceKeys.themeMode] = mode.toPreferenceString()
         }
     }
 
@@ -42,7 +42,21 @@ class AppPreferences @Inject constructor(
         val lastRoute = stringPreferencesKey("last_route")
     }
 
+    enum class ThemeModeValue { System, Dark, Light }
+
     companion object {
         const val DEFAULT_THEME_MODE = "system"
+
+        fun String?.toThemeModeValue(): ThemeModeValue = when (this) {
+            "dark"  -> ThemeModeValue.Dark
+            "light" -> ThemeModeValue.Light
+            else    -> ThemeModeValue.System
+        }
+
+        fun ThemeModeValue.toPreferenceString(): String = when (this) {
+            ThemeModeValue.System -> "system"
+            ThemeModeValue.Dark   -> "dark"
+            ThemeModeValue.Light  -> "light"
+        }
     }
 }

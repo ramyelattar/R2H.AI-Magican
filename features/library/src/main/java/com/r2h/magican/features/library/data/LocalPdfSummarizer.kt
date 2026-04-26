@@ -1,5 +1,8 @@
 package com.r2h.magican.features.library.data
 
+import com.r2h.magican.ai.orchestrator.RiskClassifier
+import com.r2h.magican.ai.orchestrator.RiskLevel
+import com.r2h.magican.ai.orchestrator.SafetyTokenizer
 import com.r2h.magican.ai.runtime.AiRuntime
 import com.r2h.magican.features.library.domain.LibraryDocument
 import javax.inject.Inject
@@ -13,24 +16,39 @@ interface LocalPdfSummarizer {
 
 @Singleton
 class AiRuntimePdfSummarizer @Inject constructor(
-    private val aiRuntime: AiRuntime
+    private val aiRuntime: AiRuntime,
+    private val tokenizer: SafetyTokenizer,
+    private val classifier: RiskClassifier
 ) : LocalPdfSummarizer {
 
+    /**
+     * Strips tokens classified as Critical or High risk from externally-sourced text
+     * before embedding it in an AI prompt. Prevents PDF-based prompt injection.
+     */
+    private fun sanitize(input: String): String {
+        val tokens = tokenizer.tokenize(input)
+        return tokens.filter { token ->
+            val classification = classifier.classify(token)
+            classification.level != RiskLevel.Critical && classification.level != RiskLevel.High
+        }.joinToString(" ")
+    }
+
     override suspend fun summarize(document: LibraryDocument): String {
-        val context = document.extractedText.take(6_000).ifBlank {
-            listOfNotNull(
-                document.metadata.title,
-                document.metadata.subject,
-                document.metadata.keywords
-            ).joinToString(" ")
+        val rawContext = document.extractedText.take(6_000).ifBlank {
+            listOfNotNull(document.metadata.title, document.metadata.subject, document.metadata.keywords)
+                .joinToString(" ")
         }
+
+        // Sanitize externally-sourced content to prevent PDF-based prompt injection
+        val safeContext = sanitize(rawContext)
+        val safeName = sanitize(document.displayName)
 
         val prompt = """
             Summarize this PDF locally.
             Return plain text only, 5 bullet points max.
-            Document: ${document.displayName}
+            Document: $safeName
             Context:
-            $context
+            $safeContext
         """.trimIndent()
 
         return runCatching {
@@ -39,7 +57,7 @@ class AiRuntimePdfSummarizer @Inject constructor(
             }
         }.getOrElse { error ->
             if (error is CancellationException) throw error
-            fallbackSummary(context)
+            fallbackSummary(rawContext)  // fallback uses raw text since it won't be sent to AI
         }
     }
 

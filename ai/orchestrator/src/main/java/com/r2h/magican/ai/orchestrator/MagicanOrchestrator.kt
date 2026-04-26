@@ -117,8 +117,10 @@ class MagicanOrchestrator @Inject constructor(
     }
 
     private fun estimateTokenCount(text: String): Int {
+        // Subword tokenizers average ~4 chars/token for English text.
+        // More accurate than word-count for BPE/SentencePiece models.
         val compact = text.trim()
         if (compact.isEmpty()) return 0
-        return compact.split(Regex("\\s+")).size
+        return (compact.length / 4).coerceAtLeast(1)
     }
 }

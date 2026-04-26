@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.sqrt
 
@@ -70,7 +71,7 @@ class AudioRecordBlowDetector @Inject constructor(
                 return@launch
             }
 
-            while (!isClosedForSend) {
+            while (isActive && !isClosedForSend) {
                 val read = audioRecord.read(buffer, 0, buffer.size, AudioRecord.READ_BLOCKING)
                 if (read <= 0) {
                     if (read == AudioRecord.ERROR_DEAD_OBJECT ||

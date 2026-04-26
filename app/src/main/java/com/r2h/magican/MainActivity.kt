@@ -3,15 +3,20 @@ package com.r2h.magican
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -41,18 +48,24 @@ import com.r2h.magican.features.palm.presentation.PalmScreen
 import com.r2h.magican.features.tarot.presentation.TarotScreen
 import com.r2h.magican.features.voiceaura.presentation.VoiceAuraScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject lateinit var appPreferences: AppPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            var themeMode by rememberSaveable { mutableStateOf(ThemeMode.System) }
+            val themeMode by appPreferences.themeModeValue
+                .collectAsStateWithLifecycle(initialValue = AppPreferences.ThemeModeValue.System)
             val darkTheme = when (themeMode) {
-                ThemeMode.System -> androidx.compose.foundation.isSystemInDarkTheme()
-                ThemeMode.Dark -> true
-                ThemeMode.Light -> false
+                AppPreferences.ThemeModeValue.System -> isSystemInDarkTheme()
+                AppPreferences.ThemeModeValue.Dark   -> true
+                AppPreferences.ThemeModeValue.Light  -> false
             }
 
             MysticTheme(
@@ -64,14 +77,14 @@ class MainActivity : ComponentActivity() {
                 AppNavHost(
                     navController = navController,
                     themeMode = themeMode,
-                    onThemeModeChange = { themeMode = it }
+                    onThemeModeChange = { newMode ->
+                        lifecycleScope.launch { appPreferences.setThemeMode(newMode) }
+                    }
                 )
             }
         }
     }
 }
-
-private enum class ThemeMode { System, Dark, Light }
 
 private data class FeatureRoute(
     val route: String,
@@ -93,8 +106,8 @@ private val HomeRoutes = listOf(
 @Composable
 private fun AppNavHost(
     navController: NavHostController,
-    themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit
+    themeMode: AppPreferences.ThemeModeValue,
+    onThemeModeChange: (AppPreferences.ThemeModeValue) -> Unit
 ) {
     var lastRoute by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -130,8 +143,8 @@ private fun AppNavHost(
 
 @Composable
 private fun HomeScreen(
-    themeMode: ThemeMode,
-    onThemeModeChange: (ThemeMode) -> Unit,
+    themeMode: AppPreferences.ThemeModeValue,
+    onThemeModeChange: (AppPreferences.ThemeModeValue) -> Unit,
     lastRouteTitle: String?,
     onOpenLast: () -> Unit,
     onOpen: (String) -> Unit
@@ -168,20 +181,20 @@ private fun HomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton(
                         text = "Theme: System",
-                        onClick = { onThemeModeChange(ThemeMode.System) },
-                        enabled = themeMode != ThemeMode.System,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.System) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.System,
                         modifier = Modifier.fillMaxWidth()
                     )
                     NeonButton(
                         text = "Theme: Dark",
-                        onClick = { onThemeModeChange(ThemeMode.Dark) },
-                        enabled = themeMode != ThemeMode.Dark,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.Dark) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.Dark,
                         modifier = Modifier.fillMaxWidth()
                     )
                     NeonButton(
                         text = "Theme: Light",
-                        onClick = { onThemeModeChange(ThemeMode.Light) },
-                        enabled = themeMode != ThemeMode.Light,
+                        onClick = { onThemeModeChange(AppPreferences.ThemeModeValue.Light) },
+                        enabled = themeMode != AppPreferences.ThemeModeValue.Light,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -232,15 +245,29 @@ private fun FeatureContainer(
     onBack: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(text = title, style = MaterialTheme.typography.titleLarge)
-            NeonButton(
-                text = "Back to Home",
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth()
-            )
+    Scaffold(
+        topBar = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Text(text = title, style = MaterialTheme.typography.titleLarge)
+                NeonButton(
+                    text = "Back to Home",
+                    onClick = onBack,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
-        content()
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            content()
+        }
     }
 }

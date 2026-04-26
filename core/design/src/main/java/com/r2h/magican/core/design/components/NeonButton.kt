@@ -22,6 +22,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.r2h.magican.core.design.theme.mysticNeonTokens
 
@@ -75,6 +77,9 @@ fun NeonButton(
                 ),
                 shape = shape
             )
+            .semantics {
+                contentDescription = if (isLoading) loadingText else text
+            }
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),

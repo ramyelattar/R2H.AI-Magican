@@ -111,12 +111,25 @@ class LibraryRepository @Inject constructor(
         }
     }
 
+    /**
+     * Pre-populates the document snapshot and rebuilds the search index.
+     * **For unit tests only** — not part of the production API.
+     */
+    @Suppress("unused")
+    internal fun seedForTest(docs: List<LibraryDocument>) {
+        _documents.value = docs
+        searchIndex.rebuild(docs)
+    }
+
     fun search(query: String): List<LibraryDocument> {
         val q = query.trim()
-        if (q.isBlank()) return _documents.value
+        // Capture a single consistent snapshot to avoid two diverging reads
+        // under concurrent mutation (delete/import hold the mutex while updating _documents).
+        val snapshot = _documents.value
+        if (q.isBlank()) return snapshot
 
         val matchingIds = searchIndex.search(q, maxResults = 100)
-        val docMap = _documents.value.associateBy { it.id }
+        val docMap = snapshot.associateBy { it.id }
 
         return matchingIds.mapNotNull { docMap[it] }
     }
